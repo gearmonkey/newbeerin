@@ -1,3 +1,4 @@
+build
 *.pyc
 *.swp
 *.egg-info
@@ -5,3 +6,4 @@
 *.tmproj
 *.DS_Store
 *.csv
+credentials.py
