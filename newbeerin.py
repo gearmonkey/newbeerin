@@ -42,9 +42,53 @@ def is_otb(model, tweet, bypass_words = ['#otb', '#nowpouring']):
     return False
 
     
-def split_beers(tweet):
+def split_beers(tweet, max_intro_prop=0.33):
     """break tweet into composite list of strings representing beers on offer
     currently uses"""
+    tweet = tweet.lower()
+    #first pruning
+    pruned = tweet.rsplit(':',1)[-1]
+    #if it pulls off more than max_intro_prop ignore
+    if len(pruned)/float(len(tweet))<max_intro_prop:
+        tweet = pruned
+        
+    pruned = tweet.rsplit(':',1)[-1]
+    #if it pulls off more than max_intro_prop ignore
+    if len(pruned)/float(len(tweet))<max_intro_prop:
+        tweet = pruned
+        
+    pruned = tweet.rsplit(' - ',1)[-1]
+    #if it pulls off more than 33% ignore
+    if len(pruned)/float(len(tweet))<max_intro_prop:
+        tweet = pruned
+        
+    #the (intro) cask (beer) keg (beer) pattern
+    pruned = tweet.rsplit('cask',1)[-1]
+    #if it pulls off more than 33% ignore
+    if len(pruned)/float(len(tweet))<max_intro_prop:
+        tweet = pruned
+    
+    #split on newlines, then ',', then '.' use first that results in at least 3 tokens
+    if len(tweet.split(','))>2:
+        beers = tweet.split(',')
+        if '.' in beers[-1]:
+            beers[-1] = beers[-1].split('.',1)[0]
+    elif len(tweet.split('.'))>2:
+        beers = tweet.split('.')
+        if ',' in beers[-1]:
+            beers[-1] = beers[-1].split(',',1)[0]
+    elif len(tweet.split('\n'))>2:
+        if '.' in beers[-1]:
+            beers[-1] = beers[-1].split('.',1)[0]
+        if ',' in beers[-1]:
+            beers[-1] = beers[-1].split(',',1)[0]
+    else:
+        beers = []
+    
+    if len(beers)>0 and 'http' in beers[-1]:
+        beers[-1] = beers[-1].split('http',1)[0]
+    
+    return beers
     
     
 def is_fresh(beer, days_old=90):
