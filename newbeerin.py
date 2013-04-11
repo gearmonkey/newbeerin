@@ -13,6 +13,7 @@ import sys
 import os
 import unittest
 from datetime import datetime
+from random import sample
 
 import twitter
 import redis
@@ -20,7 +21,11 @@ r = redis.StrictRedis(host='localhost', port=6379, db=0)
 
 from credentials import *
 
-def fetch_new_tweets(api, cursor = 0, page=0):
+TEMPLATES = ["New beer @{username}! Head there to find {beer}",
+             "Looking for {beer}? They just put it on @{username}",
+             ]
+
+def fetch_new_tweets(api, cursor = 0, page=0): 
     """grab new tweets from followers, since cursor, if given
     returns sequence of tuples of the form
     (username, tweetid, tweet text)
@@ -97,14 +102,30 @@ def is_fresh(beer, days_old=90):
         In the case that it either isn't in the store or the date is older than days_old
         return True, otherwise return False
         in all cases create or update value in the redis store for the beer string to be the current datetime"""
-        raise NotImplementedError
+        last_seen = r.get('beer_'+beer)
+        now = datetime.now()
+        r.set('beer_'+beer, now)
+        if last_seen != None and  (now-last_seen).days < days_old:
+            return False
+        return True
+            
+        
 
-def tweet_these(api, beers, username, twid, dryrun=False):
+def tweet_these(api, beers, username, twid, dryrun=False, templates=TEMPLATES ):
     """generate tweet about the appearance of beers, 
        citing the name and id they came from if dryrun, 
        just print the tweet, else push it via api
        """
-       raise NotImplementedError
+    pretty_beer = reduce(lambda x,y:x+', '+y, beers)
+    text = sample(templates, 1)[0].format(beer=pretty_beer, username=username)
+    if len(text)<111:
+        text += ' https://twitter.com/{user}/status/{twid}'.format(user=username, twid=twid)
+    if dryrun:
+        print 'would have tweeted:'
+        print text
+    else:
+        status = api.PostUpdate(text)
+        
 
 def main(argv=None):
     if argv==None:
