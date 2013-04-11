@@ -20,21 +20,32 @@ r = redis.StrictRedis(host='localhost', port=6379, db=0)
 
 from credentials import *
 
-def fetch_new_tweets(api, cursor = 0):
+def fetch_new_tweets(api, cursor = 0, page=0):
     """grab new tweets from followers, since cursor, if given
     returns sequence of tuples of the form
-    (username, tweetid, tweet text)"""
-    raise NotImplementedError
+    (username, tweetid, tweet text)
+    fetches until at least cursor, unless cursor is 0, in which case only the most recent page is grabbed
+    (just grabs a page for now)"""
+    tweets = api.GetFriendsTimeline(count=100)
+    for tweet in tweets:
+        yield tweet.user.screen_name, tweet.id, tweet.text
+    
     
 def is_otb(model, tweet, bypass_words = ['#otb', '#nowpouring']):
     """run tweet on model to determine if it a probably OTB tweet returning true if it is
     if the tweet contains any bybass_words, does not run against model and returns true"""
-    raise NotImplementedError
+    for word in bypass_words:
+        if word in tweet.split():
+            return True
+    if model.classify(tweet) == 1:
+        return True
+    return False
+
     
 def split_beers(tweet):
     """break tweet into composite list of strings representing beers on offer
-    currently uses """
-    raise NotImplementedError
+    currently uses"""
+    
     
 def is_fresh(beer, days_old=90):
     """looks for the beer string in the redis store
@@ -65,7 +76,7 @@ def main(argv=None):
         model = cPickle.load(rh)
     cursor = 0
     while True:
-        for username, twid, tweet in fetch_new_tweets(api, cursor):
+        for username, twurl, tweet in fetch_new_tweets(api, cursor):
             if is_otb(model, tweet):
                 beers = split_beers(tweet)
                 new_beers = [beer for beer in beers if beer not is_fresh(beer)]
