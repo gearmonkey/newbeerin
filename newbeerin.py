@@ -54,7 +54,7 @@ def fetch_new_tweets(api, cursor = 0):
         yield tweet.user.screen_name, tweet.id, tweet.text
     
     
-def is_otb(model, tweet, bypass_words = ['#otb', '#nowpouring', 'otb', 'on the bar']):
+def is_otb(model, tweet, bypass_words = ['#otb', '#nowpouring', 'otb', 'on the bar', 'new on']):
     """run tweet on model to determine if it a probably OTB tweet returning true if it is
     if the tweet contains any bybass_words, does not run against model and returns true"""
     for word in bypass_words:
@@ -109,7 +109,7 @@ def split_beers(tweet, max_intro_prop=0.33):
         if ',' in beers[-1]:
             beers[-1] = beers[-1].split(',',1)[0]
     else:
-        beers = []
+        beers = [tweet]
     
     if len(beers)>0 and 'http' in beers[-1]:
         beers[-1] = beers[-1].split('http',1)[0]
