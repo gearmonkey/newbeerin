@@ -167,12 +167,16 @@ def main(argv=None):
                       consumer_secret=CONSUMER_SECRET,
                       access_token_key=ACCESS_KEY,
                       access_token_secret=ACCESS_SECRET)
+    the_tweeter = api.VerifyCredentials().screen_name
     with open(argv[1]) as rh:
         model = cPickle.load(rh)
     cursor = 0
     while True:
         print "fetching new tweets…"
         for username, twid, tweet in fetch_new_tweets(api, cursor):
+            if username == the_tweeter:
+                #skip tweets from yourself.
+                continue
             if is_otb(model, tweet):
                 beers = split_beers(tweet)
                 new_beers = [beer for beer in beers if is_fresh(beer)]
