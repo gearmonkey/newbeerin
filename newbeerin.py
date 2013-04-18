@@ -37,7 +37,7 @@ SHORT_TMPLS = [u"New beers on klaxon, @{username}, too many to list, check: {lin
                u"Tasty new beer @{username}: {link}"
                ]
 
-BYPASS_WORDS = ['#otb', '#nowpouring', 'otb', 'on the bar', 'new on']
+BYPASS_WORDS = ['#otb', '#nowpouring', 'otb', 'on the bar', 'new on', 'on cask today', 'on keg today']
 
 def fetch_new_tweets(api, cursor = 0): 
     """grab new tweets from followers, since cursor, if given
