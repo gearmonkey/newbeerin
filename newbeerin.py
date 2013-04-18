@@ -151,11 +151,12 @@ def tweet_these(api, beers, username, twid, dryrun=False, templates=TEMPLATES, s
        citing the name and id they came from if dryrun, 
        just print the tweet, else push it via api
        """
+    username = username.decode('utf8')
     bitly = bitly_api.Connection(access_token=BITLY_ACCESS_TOKEN)
-    short = bitly.shorten('https://twitter.com/{user}/status/{twid}'.format(user=username, twid=twid))
+    short = bitly.shorten(u'https://twitter.com/{user}/status/{twid}'.format(user=username, twid=twid))
     if len(beers) > 0:
-        pretty_beer = reduce(lambda x,y:x.title()+u', '+y, beers).encode('utf8')
-        text = sample(templates, 1)[0].format(beer=pretty_beer.title(), username=username)
+        pretty_beer = reduce(lambda x,y:x.title()+u', '+y, beers)
+        text = sample(templates, 1)[0].format(beer=pretty_beer.title().decode('utf8'), username=username)
         text += u' '+ short[u'url']
     else:
         print "No Beers, but tweeting a link for", twid
