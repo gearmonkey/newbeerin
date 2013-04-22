@@ -101,7 +101,13 @@ def split_beers(tweet, max_intro_prop=0.33, stops=BYPASS_WORDS):
         tweet = tweet.replace(stop_phrase, ' ')
     
     #split on newlines, then ',', then '.' use first that results in at least 3 tokens
-    if len(tweet.split(','))>2:
+    if len(tweet.split('\n'))>2:
+        beers = tweet.split('\n')
+        if '.' in beers[-1]:
+            beers[-1] = beers[-1].split('.',1)[0]
+        if ',' in beers[-1]:
+            beers[-1] = beers[-1].split(',',1)[0]
+    elif len(tweet.split(','))>2:
         beers = tweet.split(',')
         if '.' in beers[-1]:
             beers[-1] = beers[-1].split('.',1)[0]
@@ -109,12 +115,7 @@ def split_beers(tweet, max_intro_prop=0.33, stops=BYPASS_WORDS):
         beers = tweet.split('.')
         if ',' in beers[-1]:
             beers[-1] = beers[-1].split(',',1)[0]
-    elif len(tweet.split('\n'))>2:
-        beers = tweet.split('\n')
-        if '.' in beers[-1]:
-            beers[-1] = beers[-1].split('.',1)[0]
-        if ',' in beers[-1]:
-            beers[-1] = beers[-1].split(',',1)[0]
+
     else:
         beers = [tweet]
     
