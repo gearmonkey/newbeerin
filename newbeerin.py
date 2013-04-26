@@ -24,20 +24,21 @@ r = redis.StrictRedis(host='localhost', port=6379, db=0)
 
 from credentials import *
 
-TEMPLATES = [u"New beer @{username}! Head there to find {beer}",
-             u"Looking for {beer}? They just put it on @{username}",
-             u"So @{username} just put on {beer}, so you know",
-             u"Thirsty? Grab some {beer} @{username}!"
+TEMPLATES = [unicode("New beer @{username}! Head there to find {beer}", 'utf8'),
+             unicode("Looking for {beer}? They just put it on @{username}", 'utf8'),
+             unicode("So @{username} just put on {beer}, so you know", 'utf8'),
+             unicode("Thirsty? Grab some {beer} @{username}!", 'utf8')
              ]
 
-SHORT_TMPLS = [u"New beers on klaxon, @{username}, too many to list, check: {link}",
-               u"Lots of new beer on @{username}, {link}",
-               u"So much new beer on @{username}, {link}",
+SHORT_TMPLS = [u"New beers on klaxon, @{username}, can't fit in 140 chars, check: {link}",
+               u"Some new beer on @{username}, {link}",
+               u".@{username} has new beer on: {link}",
                u"Looks like @{username} just put on a bunch of new beer {link}",
                u"Tasty new beer @{username}: {link}"
                ]
 
-BYPASS_WORDS = ['#otb', '#nowpouring', 'otb', 'on the bar', 'new on', 'on cask today', 'on keg today']
+BYPASS_WORDS = ['otb', 'on the bar', 'new on', 'on cask today', 'on keg today']
+STOP_WORDS = ['football', 'rugby', 'sport', 'champions league']
 
 def fetch_new_tweets(api, cursor = 0): 
     """grab new tweets from followers, since cursor, if given
@@ -58,11 +59,22 @@ def fetch_new_tweets(api, cursor = 0):
         yield tweet.user.screen_name, tweet.id, tweet.text
     
     
-def is_otb(model, tweet, bypass_words=BYPASS_WORDS):
+def is_otb(model, tweet, bypass_words=BYPASS_WORDS, stop_words=STOP_WORDS):
     """run tweet on model to determine if it a probably OTB tweet returning true if it is
-    if the tweet contains any bybass_words, does not run against model and returns true"""
+    if the tweet contains any stop_words, does not run against the model, returns false
+    if the tweet contains any bypass_words, does not run against model and returns true
+    stop_words take precendant over bypass words, except the hardcoded '#otb' and '#nowpouring'"""
+    tweet = tweet.lower()
+    for word in ('#nowpouring','#otb'):
+        if word in tweet:
+            print word
+            return True
+    for work in stop_words:
+        if word in tweet:
+            print 'explict STOP on tweet'
+            return False
     for word in bypass_words:
-        if word in tweet.lower():
+        if word in tweet:
             print 'bypass catch'
             return True
     if int(model.classify(tweet)) == 1:
@@ -156,8 +168,9 @@ def tweet_these(api, beers, username, twid, dryrun=False, templates=TEMPLATES, s
     bitly = bitly_api.Connection(access_token=BITLY_ACCESS_TOKEN)
     short = bitly.shorten(u'https://twitter.com/{user}/status/{twid}'.format(user=username, twid=twid))
     if len(beers) > 0:
-        pretty_beer = reduce(lambda x,y:x.title()+u', '+y, beers)
-        text = sample(templates, 1)[0].format(beer=pretty_beer.title().decode('utf8'), username=username)
+        beers[0] = beers[0].decode('utf8')
+        pretty_beer = reduce(lambda x,y:x+u', '+y.decode('utf8'), beers)
+        text = sample(templates, 1)[0].format(beer=pretty_beer.title(), username=username)
         text += u' '+ short[u'url']
     else:
         print "No Beers, but tweeting a link for", twid
