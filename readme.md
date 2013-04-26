@@ -7,3 +7,11 @@ To use it yourself, you'd need to train up a classifier. Then associate it with 
 
 Uses the friends feed as input, so you can curate the tweets via the followers.
 
+
+
+TODO
+----
+- model can be more robust (this will probably be here forever):
+  - better ignoring of sport
+- better beer item splitting
+- copy tightening
