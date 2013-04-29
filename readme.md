@@ -15,3 +15,4 @@ TODO
   - better ignoring of sport
 - better beer item splitting
 - copy tightening
+- rewrite formatting to add as many beers as will fit in broadcast tweet

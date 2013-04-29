@@ -26,7 +26,7 @@ r = redis.StrictRedis(host='localhost', port=6379, db=0)
 from credentials import *
 
 TEMPLATES = [unicode("New beer @{username}! Head there to find {beer}", 'utf8'),
-             unicode("Looking for {beer}? They just put it on @{username}", 'utf8'),
+             unicode("Looking for {beer}? Just put on @{username}", 'utf8'),
              unicode("So @{username} just put on {beer}, so you know", 'utf8'),
              unicode("Thirsty? Grab some {beer} @{username}!", 'utf8')
              ]
@@ -115,9 +115,6 @@ def split_beers(tweet, max_intro_prop=0.33, stops=BYPASS_WORDS):
         tweet = pruned
         tweet = tweet.replace('keg', ' ')
     
-    for stop_phrase in stops:
-        tweet = tweet.replace(stop_phrase, ' ')
-    
     #split on newlines, then ',', then '.' use first that results in at least 3 tokens
     if len(tweet.split('\n'))>2:
         beers = tweet.split('\n')
@@ -150,8 +147,15 @@ def split_beers(tweet, max_intro_prop=0.33, stops=BYPASS_WORDS):
         last_beer = beers.pop(-1)
         beers += [b.strip() for b in last_beer.split('&')]
     
-    return [b.strip().strip('.,?!:;').strip() for b in beers if len(b)>0 and not b.lower() in stops]
+    beers = [b.strip().strip('.,?!:;').strip() for b in beers if len(b)>9 and not b.lower() in stops]
     
+    for stop_phrase in stops:
+        #clean out the hard stops
+        for idx, beer in enumerate(beers):
+            if stop_phrase in beer:
+                beers[idx] = beer.split(stop_phrase, 1)[0]
+                
+    return beers
     
 def is_fresh(beer, days_old=90):
     """looks for the beer string in the redis store
@@ -182,15 +186,27 @@ def tweet_these(api, beers, username, twid, dryrun=False, templates=TEMPLATES, s
     username = username.decode('utf8')
     bitly = bitly_api.Connection(access_token=BITLY_ACCESS_TOKEN)
     short = bitly.shorten(u'https://twitter.com/{user}/status/{twid}'.format(user=username, twid=twid))
+    template = sample(templates, 1)[0]
+    
     if len(beers) > 0:
-        beers[0] = beers[0].decode('utf8')
-        pretty_beer = reduce(lambda x,y:x+u', '+y.decode('utf8'), beers)
-        text = sample(templates, 1)[0].format(beer=pretty_beer.title(), username=username)
+        beers.sort(key=len)
+        this_beer = beers.pop(0).decode('utf8').strip()
+        text = template.format(username=username, beer=this_beer+u"{beer}")
+        
+        while len(beers) > 0 and len(text.format(beer=", "+beers[0])) < 110:
+            this_beer = beers.pop(0).decode('utf8')
+            if len(beers) > 0:
+                text = text.format(beer=", "+this_beer+u"{beer}")
+            else:
+                text = text.format(beer="& "+this_beer)
+        if len(beers) > 0:
+            text = text.format(beer=u' & more')
         text += u' '+ short[u'url']
     else:
         print "No Beers, but tweeting a link for", twid
         text = sample(short_tmpls,1)[0].format(username=username, link=short[u'url'])
     if len(text) > 140:
+        #give up, just tweet the link
         text = sample(short_tmpls,1)[0].format(username=username, link=short[u'url'])
     if dryrun:
         print 'would have tweeted:'
