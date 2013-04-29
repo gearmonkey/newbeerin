@@ -38,7 +38,7 @@ SHORT_TMPLS = [u"New beers on klaxon, @{username}, can't fit in 140 chars, check
                ]
 
 BYPASS_WORDS = ['otb', 'on the bar', 'new on', 'on cask today', 'on keg today']
-STOP_WORDS = ['football', 'rugby', 'sport', 'champions league']
+STOP_WORDS = ['football', 'rugby', 'cricket', 'champions league']
 
 def fetch_new_tweets(api, cursor = 0): 
     """grab new tweets from followers, since cursor, if given
@@ -69,7 +69,7 @@ def is_otb(model, tweet, bypass_words=BYPASS_WORDS, stop_words=STOP_WORDS):
         if word in tweet:
             print word
             return True
-    for work in stop_words:
+    for word in stop_words:
         if word in tweet:
             print 'explict STOP on tweet'
             return False
