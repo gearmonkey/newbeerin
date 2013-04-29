@@ -13,6 +13,7 @@ import sys
 import os
 import cPickle
 import time
+import re
 
 from datetime import datetime
 from random import sample
@@ -86,6 +87,11 @@ def split_beers(tweet, max_intro_prop=0.33, stops=BYPASS_WORDS):
     """break tweet into composite list of strings representing beers on offer
     currently uses"""
     tweet = tweet.lower()
+    #remove any urls
+    for url in re.finditer(r'(http://t.co/[\w]*)', tweet):
+        print 'pruning', url.group()
+        tweet = tweet.replace(url.group(), '').replace('  ', ' ')
+    
     #first pruning
     pruned = tweet.rsplit(':',1)[-1]
     #if it pulls off more than max_intro_prop ignore
@@ -127,13 +133,22 @@ def split_beers(tweet, max_intro_prop=0.33, stops=BYPASS_WORDS):
         beers = tweet.split('.')
         if ',' in beers[-1]:
             beers[-1] = beers[-1].split(',',1)[0]
-
+    #last ditch effort, use the '@' to split (but need to put it back for the render)
+    elif len(tweet.split('@'))>2:
+        beers = ['@'+b for b in tweet.split('@')]
+        if tweet[0] != '@':
+            #special case, first beer might be weird
+            beers[0] = beers[0][1:]
     else:
         beers = [tweet]
     
-    if len(beers)>0 and 'http' in beers[-1]:
-        beers[-1] = beers[-1].split('http',1)[0]
-    
+    #if there's an 'and' in the last beer, split on it
+    if ' and ' in beers[-1]:
+        last_beer = beers.pop(-1)
+        beers += last_beer.split(' and ')
+    elif '&' in beers[-1]:
+        last_beer = beers.pop(-1)
+        beers += [b.strip() for b in last_beer.split('&')]
     
     return [b.strip().strip('.,?!:;').strip() for b in beers if len(b)>0 and not b.lower() in stops]
     
