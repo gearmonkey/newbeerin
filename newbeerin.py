@@ -201,6 +201,7 @@ def tweet_these(api, beers, username, twid, dryrun=False, templates=TEMPLATES, s
                 text = text.format(beer="& "+this_beer)
         if len(beers) > 0:
             text = text.format(beer=u' & more')
+        text = text.replace('{beer}', '')
         text += u' '+ short[u'url']
     else:
         print "No Beers, but tweeting a link for", twid
