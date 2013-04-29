@@ -153,7 +153,7 @@ def split_beers(tweet, max_intro_prop=0.33, stops=BYPASS_WORDS):
         #clean out the hard stops
         for idx, beer in enumerate(beers):
             if stop_phrase in beer:
-                beers[idx] = beer.split(stop_phrase, 1)[0]
+                beers[idx] = beer.split(stop_phrase)[0]
                 
     return beers
     
@@ -190,11 +190,11 @@ def tweet_these(api, beers, username, twid, dryrun=False, templates=TEMPLATES, s
     
     if len(beers) > 0:
         beers.sort(key=len)
-        this_beer = beers.pop(0).decode('utf8').strip()
+        this_beer = beers.pop(0).decode('utf8').strip().title()
         text = template.format(username=username, beer=this_beer+u"{beer}")
         
         while len(beers) > 0 and len(text.format(beer=", "+beers[0])) < 110:
-            this_beer = beers.pop(0).decode('utf8')
+            this_beer = beers.pop(0).decode('utf8').strip().title()
             if len(beers) > 0:
                 text = text.format(beer=", "+this_beer+u"{beer}")
             else:
