@@ -1,0 +1,3 @@
+[submodule "titlecase"]
+	path = titlecase
+	url = https://github.com/gearmonkey/titlecase
