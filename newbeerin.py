@@ -14,6 +14,7 @@ import os
 import cPickle
 import time
 import re
+import HTMLParser
 
 from datetime import datetime
 from random import sample
@@ -21,6 +22,9 @@ from random import sample
 import twitter
 import bitly_api
 import redis
+
+from titlecase import titlecase
+
 r = redis.StrictRedis(host='localhost', port=6379, db=0)
 
 from credentials import *
@@ -41,6 +45,9 @@ SHORT_TMPLS = [u"New beers on klaxon, @{username}, can't fit in 140 chars, check
 BYPASS_WORDS = ['otb', 'on the bar', 'new on', 'on cask today', 'on keg today']
 STOP_WORDS = ['football', 'rugby', 'cricket', 'champions league']
 
+TOKEN_REGEX = r'\W{token}\W'
+MIN_BEER_LENGTH = 9
+
 def fetch_new_tweets(api, cursor = 0): 
     """grab new tweets from followers, since cursor, if given
     returns sequence of tuples of the form
@@ -48,6 +55,7 @@ def fetch_new_tweets(api, cursor = 0):
     fetches until at least cursor, unless cursor is 0, in which case only the most recent page is grabbed
     (just grabs a page for now)"""
     kwargs = {'count':100}
+
     if cursor > 0:
         kwargs["since_id"] = cursor
     try:
@@ -67,71 +75,92 @@ def is_otb(model, tweet, bypass_words=BYPASS_WORDS, stop_words=STOP_WORDS):
     stop_words take precendant over bypass words, except the hardcoded '#otb' and '#nowpouring'"""
     tweet = tweet.lower()
     for word in ('#nowpouring','#otb'):
-        if word in tweet:
+        if re.findall(TOKEN_REGEX.format(token=word), tweet):
             print word
             return True
     for word in stop_words:
-        if word in tweet:
+        if re.findall(TOKEN_REGEX.format(token=word), tweet):
             print 'explict STOP on tweet'
             return False
     for word in bypass_words:
-        if word in tweet:
+        if re.findall(TOKEN_REGEX.format(token=word), tweet):
             print 'bypass catch'
             return True
     if int(model.classify(tweet)) == 1:
+        print "Model says it's OTB"
         return True
     return False
 
     
-def split_beers(tweet, max_intro_prop=0.33, stops=BYPASS_WORDS):
+def split_beers(tweet, max_intro_prop=0.49, stops=BYPASS_WORDS):
     """break tweet into composite list of strings representing beers on offer
     currently uses"""
-    tweet = tweet.lower()
+    print 'incoming:',tweet
+    h = HTMLParser.HTMLParser()
+    tweet = h.unescape(tweet.lower())
     #remove any urls
     for url in re.finditer(r'(http://t.co/[\w]*)', tweet):
         print 'pruning', url.group()
         tweet = tweet.replace(url.group(), '').replace('  ', ' ')
-    
+    tweet = tweet.replace('...', '') #scrub manual elipse
+    print 'cleaned:',tweet
     #first pruning
-    pruned = tweet.rsplit(':',1)[-1]
+    pruned = tweet.split(':',1)[-1]
+    print "proposed to prune to", pruned,
     #if it pulls off more than max_intro_prop ignore
     if len(pruned)/float(len(tweet))>(1-max_intro_prop):
         tweet = pruned
+        print "using it"
+    print 
         
-    pruned = tweet.rsplit(':',1)[-1]
+    pruned = tweet.split(';',1)[-1]
+    print "proposed to prune to", pruned,
     #if it pulls off more than max_intro_prop ignore
     if len(pruned)/float(len(tweet))>(1-max_intro_prop):
         tweet = pruned
+        print "using it"
+    print
         
-    pruned = tweet.rsplit(' - ',1)[-1]
-    #if it pulls off more than 33% ignore
+    pruned = tweet.split(' - ',1)[-1]
+    print "proposed to prune to", pruned,
+    #if it pulls off more than max_intro_prop ignore
     if len(pruned)/float(len(tweet))>(1-max_intro_prop):
         tweet = pruned
+        print "using it"
+    print
         
     #the (intro) cask (beer) keg (beer) pattern
-    pruned = tweet.rsplit('cask',1)[-1]
-    #if it pulls off more than 33% ignore
+    pruned = tweet.split('cask',1)[-1]
+    print "proposed to prune to", pruned,
+    #if it pulls off more than max_intro_prop ignore
     if len(pruned)/float(len(tweet))>(1-max_intro_prop):
         tweet = pruned
         tweet = tweet.replace('keg', ' ')
+        print "using it"
+    print
     
-    #split on newlines, then ',', then '.' use first that results in at least 3 tokens
+    #split on newlines, then ',', then '.' use first that results in at least 2 tokens
     if len(tweet.split('\n'))>2:
+        print 'spliting on newline', len(tweet.split('\n')), 'beers'
         beers = tweet.split('\n')
         if '.' in beers[-1]:
             beers[-1] = beers[-1].split('.',1)[0]
         if ',' in beers[-1]:
             beers[-1] = beers[-1].split(',',1)[0]
     elif len(tweet.split(','))>2:
+        print 'spliting on ,', len(tweet.split(',')), 'beers'
         beers = tweet.split(',')
         if '.' in beers[-1]:
             beers[-1] = beers[-1].split('.',1)[0]
+    
     elif len(tweet.split('.'))>2:
+        print 'spliting on .', len(tweet.split('.')), 'beers'
         beers = tweet.split('.')
         if ',' in beers[-1]:
             beers[-1] = beers[-1].split(',',1)[0]
     #last ditch effort, use the '@' to split (but need to put it back for the render)
     elif len(tweet.split('@'))>2:
+        print 'spliting on @', len(tweet.split('@')), 'beers'
         beers = ['@'+b for b in tweet.split('@')]
         if tweet[0] != '@':
             #special case, first beer might be weird
@@ -147,13 +176,19 @@ def split_beers(tweet, max_intro_prop=0.33, stops=BYPASS_WORDS):
         last_beer = beers.pop(-1)
         beers += [b.strip() for b in last_beer.split('&')]
     
-    beers = [b.strip().strip('.,?!:;').strip() for b in beers if len(b)>9 and not b.lower() in stops]
+    beers = [b.strip().strip('.,?!:;').strip() for b in beers if len(b)>MIN_BEER_LENGTH and not b.lower() in stops]
     
     for stop_phrase in stops:
         #clean out the hard stops
+        token_test = re.compile(TOKEN_REGEX.format(token=stop_phrase))
         for idx, beer in enumerate(beers):
-            if stop_phrase in beer:
-                beers[idx] = beer.split(stop_phrase)[0]
+            for seperated_token in token_test.findall(beer):
+                #take the largest side, if it's larger than MIN_BEER_LENGTH
+                this_beer = max(beer.split(seperated_token))
+                if len(this_beer) > MIN_BEER_LENGTH:
+                    beers[idx] = this_beer
+                else:
+                    beers.pop(idx)
                 
     return beers
     
@@ -190,11 +225,11 @@ def tweet_these(api, beers, username, twid, dryrun=False, templates=TEMPLATES, s
     
     if len(beers) > 0:
         beers.sort(key=len)
-        this_beer = beers.pop(0).decode('utf8').strip().title()
+        this_beer = titlecase(beers.pop(0).decode('utf8').strip())
         text = template.format(username=username, beer=this_beer+u"{beer}")
         
         while len(beers) > 0 and len(text.format(beer=", "+beers[0])) < 110:
-            this_beer = beers.pop(0).decode('utf8').strip().title()
+            this_beer = titlecase(beers.pop(0).decode('utf8').strip())
             if len(beers) > 0:
                 text = text.format(beer=", "+this_beer+u"{beer}")
             else:
