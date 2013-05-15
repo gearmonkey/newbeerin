@@ -60,7 +60,7 @@ def fetch_new_tweets(api, cursor = 0):
         kwargs["since_id"] = cursor
     try:
         tweets = api.GetFriendsTimeline(**kwargs)
-    except twitter.TwitterError, err:
+    except (twitter.TwitterError, twitter.httplib.BadStatusLine), err:
         print 'twitter error', err, 'trying again in a minute'
         time.sleep(60)
         tweets = api.GetFriendsTimeline(**kwargs)
@@ -95,18 +95,18 @@ def is_otb(model, tweet, bypass_words=BYPASS_WORDS, stop_words=STOP_WORDS):
 def split_beers(tweet, max_intro_prop=0.49, stops=BYPASS_WORDS):
     """break tweet into composite list of strings representing beers on offer
     currently uses"""
-    print 'incoming:',tweet
+    # print 'incoming:',tweet
     h = HTMLParser.HTMLParser()
     tweet = h.unescape(tweet.lower())
     #remove any urls
     for url in re.finditer(r'(http://t.co/[\w]*)', tweet):
-        print 'pruning', url.group()
+        # print 'pruning', url.group()
         tweet = tweet.replace(url.group(), '').replace('  ', ' ')
     tweet = tweet.replace('...', '') #scrub manual elipse
-    print 'cleaned:',tweet
+    # print 'cleaned:',tweet
     #first pruning
     pruned = tweet.split(':',1)[-1]
-    print "proposed to prune to", pruned,
+    # print "proposed to prune to", pruned,
     #if it pulls off more than max_intro_prop ignore
     if len(pruned)/float(len(tweet))>(1-max_intro_prop):
         tweet = pruned
