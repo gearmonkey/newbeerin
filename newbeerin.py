@@ -29,10 +29,10 @@ r = redis.StrictRedis(host='localhost', port=6379, db=0)
 
 from credentials import *
 
-TEMPLATES = [unicode("New beer @{username}! Head there to find {beer}", 'utf8'),
-             unicode("Looking for {beer}? Just put on @{username}", 'utf8'),
-             unicode("So @{username} just put on {beer}, so you know", 'utf8'),
-             unicode("Thirsty? Grab some {beer} @{username}!", 'utf8')
+TEMPLATES = [u"New beer @{username}! Head there to find {beer}",
+             u"Looking for {beer}? Just put on @{username}",
+             u"So @{username} just put on {beer}, so you know",
+             u"Thirsty? Grab some {beer} @{username}!"
              ]
 
 SHORT_TMPLS = [u"New beers on klaxon, @{username}, can't fit in 140 chars, check: {link}",
@@ -218,22 +218,22 @@ def tweet_these(api, beers, username, twid, dryrun=False, templates=TEMPLATES, s
        citing the name and id they came from if dryrun, 
        just print the tweet, else push it via api
        """
-    username = username.decode('utf8')
+    username = username.encode('utf-8').decode('utf-8')
     bitly = bitly_api.Connection(access_token=BITLY_ACCESS_TOKEN)
     short = bitly.shorten(u'https://twitter.com/{user}/status/{twid}'.format(user=username, twid=twid))
     template = sample(templates, 1)[0]
     
     if len(beers) > 0:
         beers.sort(key=len)
-        this_beer = titlecase(beers.pop(0).decode('utf8').strip())
+        this_beer = titlecase(beers.pop(0).encode('utf-8').decode('utf-8').strip())
         text = template.format(username=username, beer=this_beer+u"{beer}")
         
         while len(beers) > 0 and len(text.format(beer=", "+beers[0])) < 110:
-            this_beer = titlecase(beers.pop(0).decode('utf8').strip())
+            this_beer = titlecase(beers.pop(0).encode('utf-8').decode('utf-8').strip())
             if len(beers) > 0:
                 text = text.format(beer=", "+this_beer+u"{beer}")
             else:
-                text = text.format(beer="& "+this_beer)
+                text = text.format(beer=" & "+this_beer)
         if len(beers) > 0:
             text = text.format(beer=u' & more')
         text = text.replace('{beer}', '')
