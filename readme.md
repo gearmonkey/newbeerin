@@ -14,5 +14,6 @@ TODO
 - model can be more robust (this will probably be here forever):
   - better ignoring of sport
 - better beer item splitting
+  - awareness of what a price or abv token look like (these should be dropped/used to split)
 - copy tightening
 - rewrite formatting to add as many beers as will fit in broadcast tweet

@@ -59,11 +59,11 @@ def fetch_new_tweets(api, cursor = 0):
     if cursor > 0:
         kwargs["since_id"] = cursor
     try:
-        tweets = api.GetFriendsTimeline(**kwargs)
+        tweets = api.GetHomeTimeline(**kwargs)
     except (twitter.TwitterError, twitter.httplib.BadStatusLine), err:
         print 'twitter error', err, 'trying again in a minute'
         time.sleep(60)
-        tweets = api.GetFriendsTimeline(**kwargs)
+        tweets = api.GetHomeTimeline(**kwargs)
     for tweet in tweets:
         yield tweet.user.screen_name, tweet.id, tweet.text
     
