@@ -65,7 +65,7 @@ def fetch_new_tweets(api, cursor = 0):
         time.sleep(60)
         tweets = api.GetHomeTimeline(**kwargs)
     for tweet in tweets:
-        if tweet.retweeted != None:
+        if tweet.GetRetweeted_status() != None:
           #no RTs!
           continue
         yield tweet.user.screen_name, tweet.id, tweet.text
