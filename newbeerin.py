@@ -275,6 +275,8 @@ def main(argv=None):
                 #skip tweets from yourself.
                 continue
             if is_otb(model, tweet):
+                if the_tweeter.lower() in tweet.lower():
+                  tweet = tweet.lower().replace(the_tweeter.lower(), '')
                 beers = split_beers(tweet)
                 if len(beers) == 0:
                     #if we're here it means flagged as OTB but couldn't get any beer names out ot the tweet
